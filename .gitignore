@@ -2,6 +2,7 @@
 *.o
 *.pc
 *.so
+*.cbp
 *.so.*
 *~
 CMakeCache.txt
@@ -9,3 +10,8 @@ CMakeFiles
 Makefile
 cmake_install.cmake
 install_manifest.txt
+demo/
+.sync/
+.idea/
+libavfilter/
+VidStabPreprocess

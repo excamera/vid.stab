@@ -252,6 +252,34 @@ int vsReadOldTransforms(const VSTransformData* td, FILE* f , VSTransformations* 
 
 //     t = vsSimpleMotionsToTransform(md, &localmotions);
 
+int serializeTrans(const VSTransformations *trans, char **buf, size_t *buf_len) {
+  size_t total_size = sizeof(VSTransform) * trans->len + sizeof(int) * 2 + sizeof(short);
+  if ((*buf = malloc(total_size)) == NULL)
+    return 0;
+  *buf_len = total_size;
+  unsigned cur = 0;
+  memcpy((*buf)+cur, &trans->current, sizeof(int)); cur += sizeof(int);
+  memcpy((*buf)+cur, &trans->len, sizeof(int)); cur += sizeof(int);
+  memcpy((*buf)+cur, &trans->warned_end, sizeof(short)); cur += sizeof(short);
+  memcpy((*buf)+cur, trans->ts, sizeof(VSTransform) * trans->len); cur += sizeof(VSTransform) * trans->len;
+  return 1;
+}
+
+
+int deserializeTrans(const char *buf, VSTransformations **trans) {
+  if ((*trans = (VSTransformations *) malloc(sizeof(VSTransformations))) == NULL) {
+      return 0;
+  }
+  unsigned cur = 0;
+  memcpy(&((*trans)->current), buf+cur, sizeof(int)); cur += sizeof(int);
+  memcpy(&((*trans)->len), buf+cur, sizeof(int)); cur += sizeof(int);
+  memcpy(&((*trans)->warned_end), buf+cur, sizeof(short)); cur += sizeof(short);
+  if (((*trans)->ts = (VSTransform *) malloc(sizeof(VSTransform) * (*trans)->len)) == NULL)
+    return 0;
+  memcpy(((*trans)->ts), buf+cur, sizeof(VSTransform) * (*trans)->len); cur += sizeof(VSTransform) * (*trans)->len;
+  return 1;
+
+}
 
 /*
  * Local variables:

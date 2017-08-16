@@ -25,7 +25,7 @@ else()
     set(LIBSUFFIX "")
 endif()
 
-add_definitions( -Wall -O3 -g -Wno-pointer-sign -fPIC -std=gnu99)
+add_definitions( -Wall -O0 -g -Wno-pointer-sign -fPIC -std=gnu99)
 # add_definitions(  -Wall -O0 -g -Wno-pointer-sign )
 
 ### ORC is not used in any active code at the moment  ###
@@ -91,3 +91,9 @@ INSTALL(TARGETS vidstab
 
 include(create_pkgconfig_file)
 create_pkgconfig_file(vidstab "Vid.Stab, a library for stabilizing video clips")
+
+add_executable(VidStabAggregate src/vidstabaggregate.c ${SOURCES})
+
+target_link_libraries(VidStabAggregate m)
+target_link_libraries(VidStabAggregate ${ORC_LIBRARIES})
+target_link_libraries(VidStabAggregate gomp)

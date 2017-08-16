@@ -21,7 +21,7 @@
  *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-
+#include <sys/time.h>
 #include "transform.h"
 #include "transform_internal.h"
 #include "transformtype_operations.h"
@@ -31,6 +31,7 @@
 #include "transformfloat.h"
 #endif
 
+#include <memory.h>
 #include <math.h>
 #include <libgen.h>
 #include <string.h>
@@ -407,6 +408,9 @@ int cameraPathAvg(VSTransformData* td, VSTransformations* trans){
 int vsPreprocessTransforms(VSTransformData* td, VSTransformations* trans)
 {
   // works inplace on trans
+  struct timeval t1, t2;
+  double elapsedTime;
+  gettimeofday(&t1, NULL);
   if(cameraPathOptimization(td, trans)!=VS_OK) return VS_ERROR;
   VSTransform* ts = trans->ts;
   /*  invert? */
@@ -475,6 +479,10 @@ int vsPreprocessTransforms(VSTransformData* td, VSTransformations* trans)
     for (int i = 0; i < trans->len; i++)
       ts[i].zoom += td->conf.zoom;
   }
+  gettimeofday(&t2, NULL);
+  elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+  elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+  vs_log_info(td->conf.modName, "time for preprocessing: %lf\n", elapsedTime);
 
   return VS_OK;
 }
