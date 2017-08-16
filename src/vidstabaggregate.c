@@ -45,7 +45,7 @@ int file_filter(const struct dirent * dir) {
 }
 
 
-void preprocess(char *inputdir, char *outputfile, const int width, const int height) {
+void aggregateTrans(char *inputdir, char *outputfile, const int width, const int height) {
     FILE *fin, *fout;
 
     TransformContext tc;
@@ -121,82 +121,83 @@ void preprocess(char *inputdir, char *outputfile, const int width, const int hei
     if (nfiles < 0) {
         perror("scandir");
         exit(EXIT_FAILURE);
-    } else {
-        for (int i=0; i<nfiles; i++) {
-            fprintf(stderr, "reading: %s\n", namelist[i]->d_name);
-            char *filename = malloc(strlen(inputdir)+strlen(namelist[i]->d_name)+2);
-            if (!filename) {
-                perror("malloc for filename");
-                exit(EXIT_FAILURE);
-            }
-            bzero(filename, strlen(inputdir)+strlen(namelist[i]->d_name)+2);
-            strcat(strcat(strcat(filename, inputdir), "/"), namelist[i]->d_name);
-            fin = fopen(filename, "r");
-            if (!fin) {
-                perror("opening input file");
-                exit(EXIT_FAILURE);
-            } else {
-                VSManyLocalMotions mlms;
-                VSTransformations trans;
-                bzero(&trans, sizeof(trans));
-                if (vsReadLocalMotionsFile(fin, &mlms) == VS_OK) {
-                    // calculate the actual transforms from the local motions
-                    if (vsLocalmotions2Transforms(&tc.td, &mlms, &trans) != VS_OK) {
-                        perror("reading input file");
-                        exit(EXIT_FAILURE);
-                    }
-                } else { // try to read old format
-                    if (!vsReadOldTransforms(&tc.td, fin, &trans)) { /* read input file */
-                        perror("reading input file");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-
-                tc.trans.ts = realloc(tc.trans.ts, sizeof(VSTransform) * (tc.trans.len + trans.len));
-                if (!tc.trans.ts) {
-                    perror("realloc"); exit(EXIT_FAILURE);
-                }
-                memcpy(tc.trans.ts+tc.trans.len, trans.ts, sizeof(VSTransform) * trans.len);
-                tc.trans.len += trans.len;
-
-                vsTransformationsCleanup(&trans);
-            }
-            fclose(fin);
-            free(filename);
-            filename = NULL;
-            free(namelist[i]);
-        }
-        free(namelist);
-        namelist = NULL;
     }
-
-
-
-    VSTransformations trans;
-    bzero(&trans, sizeof(trans));
-    fin = fopen("demo/skiing/trf/transforms1.trf", "r");
-    if (!fin) {
-        perror("opening input file");
-        exit(EXIT_FAILURE);
-    } else {
-        VSManyLocalMotions mlms;
-        if (vsReadLocalMotionsFile(fin, &mlms) == VS_OK) {
-            // calculate the actual transforms from the local motions
-            if (vsLocalmotions2Transforms(&tc.td, &mlms, &trans) != VS_OK) {
-                perror("reading input file");
-                exit(EXIT_FAILURE);
-            }
-        } else { // try to read old format
-            if (!vsReadOldTransforms(&tc.td, fin, &trans)) { /* read input file */
-                perror("reading input file");
-                exit(EXIT_FAILURE);
-            }
+    for (int i = 0; i < nfiles; i++) {
+        fprintf(stderr, "reading: %s\n", namelist[i]->d_name);
+        char *filename = malloc(strlen(inputdir) + strlen(namelist[i]->d_name) + 2);
+        if (!filename) {
+            perror("malloc for filename");
+            exit(EXIT_FAILURE);
         }
-    }
+        bzero(filename, strlen(inputdir) + strlen(namelist[i]->d_name) + 2);
+        strcat(strcat(strcat(filename, inputdir), "/"), namelist[i]->d_name);
+        fin = fopen(filename, "r");
+        if (!fin) {
+            perror("opening input file");
+            exit(EXIT_FAILURE);
+        } else {
+            VSManyLocalMotions mlms;
+            VSTransformations trans;
+            bzero(&trans, sizeof(trans));
+            if (vsReadLocalMotionsFile(fin, &mlms) == VS_OK) {
+                // calculate the actual transforms from the local motions
+                if (vsLocalmotions2Transforms(&tc.td, &mlms, &trans) != VS_OK) {
+                    perror("reading input file");
+                    exit(EXIT_FAILURE);
+                }
+            } else { // try to read old format
+                if (!vsReadOldTransforms(&tc.td, fin, &trans)) { /* read input file */
+                    perror("reading input file");
+                    exit(EXIT_FAILURE);
+                }
+            }
 
-    int diff = memcmp(tc.trans.ts, trans.ts, sizeof(VSTransform) * trans.len);
-    if (diff) fprintf(stderr, "differs!\n");
-    else fprintf(stderr, "same!\n");
+            VSTransform *cur = trans.ts;
+            if (i != 0 && trans.len > 0) {
+                trans.len--;
+                cur++;  // skip the first zero transform
+            }
+            tc.trans.ts = realloc(tc.trans.ts, sizeof(VSTransform) * (tc.trans.len + trans.len));
+            if (!tc.trans.ts) {
+                perror("realloc");
+                exit(EXIT_FAILURE);
+            }
+            memcpy(tc.trans.ts + tc.trans.len, cur, sizeof(VSTransform) * trans.len);
+            tc.trans.len += trans.len;
+
+            vsTransformationsCleanup(&trans);
+        }
+        fclose(fin);
+        free(filename);
+        filename = NULL;
+        free(namelist[i]);
+    }
+    free(namelist);
+    namelist = NULL;
+
+
+//    VSTransformations trans;
+//    bzero(&trans, sizeof(trans));
+//    fin = fopen("demo/skiing/trf/transforms1.trf", "r");
+//    if (!fin) {
+//        perror("opening input file");
+//        exit(EXIT_FAILURE);
+//    } else {
+//        VSManyLocalMotions mlms;
+//        if (vsReadLocalMotionsFile(fin, &mlms) == VS_OK) {
+//            // calculate the actual transforms from the local motions
+//            if (vsLocalmotions2Transforms(&tc.td, &mlms, &trans) != VS_OK) {
+//                perror("reading input file");
+//                exit(EXIT_FAILURE);
+//            }
+//        } else { // try to read old format
+//            if (!vsReadOldTransforms(&tc.td, fin, &trans)) { /* read input file */
+//                perror("reading input file");
+//                exit(EXIT_FAILURE);
+//            }
+//        }
+//    }
+
 
     if (vsPreprocessTransforms(&tc.td, &tc.trans) != VS_OK) {
         exit(EXIT_FAILURE);
@@ -231,6 +232,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    preprocess(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]));
+    aggregateTrans(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]));
     exit(EXIT_SUCCESS);
 }

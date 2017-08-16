@@ -14,4 +14,4 @@ demo/
 .sync/
 .idea/
 libavfilter/
-VidStabPreprocess
+VidStabAggregate
